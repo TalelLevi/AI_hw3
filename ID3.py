@@ -22,7 +22,7 @@ class ID3:
         split_column, split_value = self.find_best_split(data, potential_splits)
         data_splits = self.split_data(data, split_column, split_value)
 
-        node = Node(data)
+        node = Node(data, split_column, split_value)
         for sub_data in data_splits:
             node.add_son(self._train_(sub_data, min_examples))
         return node
@@ -61,8 +61,17 @@ class ID3:
             return self._classify(object_to_classify, self.root)
 
     def _classify(self, object_to_classify, node):
+        # if node.sons is None:
+        #     return node.get_data()
+        if isinstance(node, float):
+            return node
+        feature = node.get_feature()
+        objects_value_for_feature = object_to_classify[feature]
+        if objects_value_for_feature <= node.get_value():
+            return self._classify(object_to_classify, node.sons[0])
+        else:
+            return self._classify(object_to_classify, node.sons[1])
 
-        pass
 
     def entropy(self, data):
         label_col = data[:, self.label_index]

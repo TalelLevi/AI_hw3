@@ -9,13 +9,13 @@ class ID3:
         self.features = None
         self.root = None
 
-    def train(self, df):
+    def train(self, df, min_examples=1):
         self.features = df.columns  # save the features names
-        self.root = self._train_(df.values)
+        self.root = self._train_(df.values, min_examples)
         pass
 
-    def _train_(self, data, min_examples=2):  # pruning with min_examples later
-        if self.check_purity(data):
+    def _train_(self, data, min_examples):  # pruning with min_examples later
+        if self.check_purity(data) or len(data) < min_examples:
             return self.classify_data(data)
 
         potential_splits = self.potential_splits(data)
@@ -36,16 +36,21 @@ class ID3:
         label_col = data[:, self.label_index]
         unique_classifications, nr_of_counts = np.unique(label_col, return_counts=True)
         candidate_index = nr_of_counts.argmax()  # most likely answer ( if only 1 exists then this is the correct one )
+        classification = unique_classifications[candidate_index]
+        if len(nr_of_counts)>1 and nr_of_counts[0] == nr_of_counts[1]:
+            return 1
         return unique_classifications[candidate_index]
 
     def potential_splits(self, data) -> dict:
         nr_of_cols = data.shape[1]  # TODO better way to get nr of cols
-        potential_splits = {}  # TODO change to list and order by index
+        potential_splits = {}  # TODO change to set in order to maintain order by col index ( feature )
         for column_index in range(nr_of_cols):
             if column_index == self.label_index:
                 continue
             values = np.unique(data[:, column_index])  # get all the values for a specific column then remove duplicates
-            potential_splits[column_index] = [(values[i] + values[i + 1]) / 2 for i in range(len(values) - 1)]
+            # potential_splits[column_index] = [(values[i] + values[i + 1]) / 2 for i in range(len(values) - 1)]
+            min_max_avg = (values.max() + values.min()) / 2
+            potential_splits[column_index] = [min_max_avg]
         return potential_splits
 
     def split_data(self, data, split_column, split_value):
@@ -61,9 +66,7 @@ class ID3:
             return self._classify(object_to_classify, self.root)
 
     def _classify(self, object_to_classify, node):
-        # if node.sons is None:
-        #     return node.get_data()
-        if isinstance(node, float):
+        if isinstance(node, float) or isinstance(node, int):
             return node
         feature = node.get_feature()
         objects_value_for_feature = object_to_classify[feature]
@@ -71,7 +74,6 @@ class ID3:
             return self._classify(object_to_classify, node.sons[0])
         else:
             return self._classify(object_to_classify, node.sons[1])
-
 
     def entropy(self, data):
         label_col = data[:, self.label_index]

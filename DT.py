@@ -7,7 +7,7 @@ from ID3 import ID3
 df = pd.read_csv('train.csv')
 
 classifer = ID3(0)
-classifer.train(df)
+classifer.train(df, 27)
 
 df2 = pd.read_csv('test.csv')
 
@@ -16,7 +16,7 @@ for i in range(len(df)):
     example = df.loc[i, :]
     our_answer = classifer.classify(example)
     # print(f'{our_answer} == {original_diagnosis} count is {i}')
-    assert(original_diagnosis == our_answer)
+    # assert(original_diagnosis == our_answer)
 
 count = 0
 for i in range(len(df2)):

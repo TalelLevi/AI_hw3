@@ -1,9 +1,8 @@
 class Tree:
-    def __init__(self, data, feature, value):
+    def __init__(self, feature, value):
         self.sons = None
         self.feature = feature
         self.value = value
-        self.data = data
 
     def add_son(self, node):
         if self.sons == None:

@@ -3,14 +3,16 @@ import numpy as np
 
 
 class ID3:
-    def __init__(self, label_index=0):
+    def __init__(self, label_index=0, epsilon=None):
         self.label_index = label_index
         self.features = None
         self.root = None
+        self.epsilon = epsilon
 
-    def train(self, df, min_examples=2):
+    def train(self, df, min_examples=1):
         self.features = df.columns  # save the features names
         self.root = self._train_(df.values, min_examples)
+        pass
 
     def _train_(self, data, min_examples):  # pruning with min_examples later
         if self.check_purity(data) or len(data) < min_examples:
@@ -33,14 +35,13 @@ class ID3:
     def classify_data(self, data):
         label_col = data[:, self.label_index]
         unique_classifications, nr_of_counts = np.unique(label_col, return_counts=True)
-        candidate_index = nr_of_counts.argmax()  # most likely answer ( if only 1 exists then this is the correct one )
-        classification = unique_classifications[candidate_index]
-        if len(nr_of_counts)>1 and nr_of_counts[0] == nr_of_counts[1]:
-            return 1
-        return classification
+        classifications = {}
+        for classification, appearances in zip(unique_classifications, nr_of_counts):
+            classifications[classification] = appearances
+        return classifications
 
     def potential_splits(self, data) -> dict:
-        nr_of_cols = data.shape[1]  # TODO better way to get nr of cols
+        nr_of_cols = data.shape[1]
         potential_splits = {}  # TODO change to set in order to maintain order by col index ( feature )
         for column_index in range(nr_of_cols):
             if column_index == self.label_index:
@@ -61,14 +62,23 @@ class ID3:
         if self.root is None:
             print('Decision does not exist please train first.')
         else:
-            return self._classify(object_to_classify, self.root)
+            classifications = self._classify(object_to_classify, self.root)
+            return max(classifications, key=classifications.get)
 
     def _classify(self, object_to_classify, node):
-        if isinstance(node, float) or isinstance(node, int):
+        if isinstance(node, dict):
             return node
         feature = node.get_feature()
         objects_value_for_feature = object_to_classify[feature]
-        if objects_value_for_feature <= node.get_value():
+        node_split_value = node.get_value()
+        epsilon = self.epsilon[feature]
+        if abs(objects_value_for_feature - node_split_value) <= epsilon:
+            a = self._classify(object_to_classify, node.sons[0])
+            b = self._classify(object_to_classify, node.sons[1])
+            classifications = {classification: a.get(classification, 0) + b.get(classification, 0) for
+                               classification in set(a) | set(b)}
+            return classifications
+        elif objects_value_for_feature <= node_split_value:
             return self._classify(object_to_classify, node.sons[0])
         else:
             return self._classify(object_to_classify, node.sons[1])

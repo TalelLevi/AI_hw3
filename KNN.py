@@ -1,6 +1,5 @@
 import pandas as pd
-import numpy as np
-from ML_algorithms import ID3 as algo
+from ML_algorithms import KNN as algo
 
 
 def calc_accuracy(df, classifer, test=True):
@@ -16,9 +15,8 @@ def calc_accuracy(df, classifer, test=True):
 
 
 df = pd.read_csv('train.csv')
-stds = [np.std(feature) * 0.1 for feature in df.values.T]
-classier = algo(0, epsilon=stds)
-classier.train(df, 2)
+classier = algo(27)
+classier.fit(df)
 df2 = pd.read_csv('test.csv')
 calc_accuracy(df, classier, test=False)
 calc_accuracy(df2, classier)

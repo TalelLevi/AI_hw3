@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
-from ID3 import ID3
-from DT_epsilon import ID3 as ID
+from ID3 import ID3 as algo
 
 
 def calc_accuracy(df, classifer, test=True):
@@ -9,7 +8,7 @@ def calc_accuracy(df, classifer, test=True):
     for i in range(len(df)):
         original_diagnosis = df.loc[i, 'diagnosis']
         example = df.loc[i, :]
-        our_answer = round(classifer.classify(example))
+        our_answer = round(classifer.predict(example))
         if our_answer != original_diagnosis:
             count += 1
     text = 'test' if test == True else 'train'
@@ -17,17 +16,8 @@ def calc_accuracy(df, classifer, test=True):
 
 
 df = pd.read_csv('train.csv')
-
-# classifer = ID3(0)
-# classifer.train(df, 27)
-
-
-stds = [np.std(feature)*0.1 for feature in df.values.T]
-
-classifer = ID(0, epsilon=stds)
-classifer.train(df, 2)
-
+classier = algo(0)
+classier.train(df, 2)
 df2 = pd.read_csv('test.csv')
-
-calc_accuracy(df, classifer, test=False)
-calc_accuracy(df2, classifer)
+calc_accuracy(df, classier, test=False)
+calc_accuracy(df2, classier)

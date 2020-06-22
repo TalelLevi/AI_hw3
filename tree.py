@@ -5,7 +5,7 @@ class Tree:
         self.value = value
 
     def add_son(self, node):
-        if self.sons == None:
+        if self.sons is None:
             self.sons = [node]
         else:
             self.sons.append(node)
@@ -15,6 +15,3 @@ class Tree:
 
     def get_value(self):
         return self.value
-
-    def get_data(self):
-        return self.data

@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
-from ML_algorithms import ID3 as algo
-
+from ML_algorithms import KnnEpsilon as algo
 
 def calc_accuracy(df, classifer, test=True):
     count = 0

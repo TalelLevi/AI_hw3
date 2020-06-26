@@ -6,6 +6,9 @@ def euclidean_dist(vec1, vec2):
     return np.square(np.sum((vec1 - vec2) ** 2))
 
 
+""" K-nearest-neighbours """
+
+
 class KNN:
     def __init__(self, k=9):
         self.k = k
@@ -21,7 +24,7 @@ class KNN:
         self.normalize_max_min_diff = np.array([feature.max() - feature.min() for feature in self.data.T])
         self.data = np.apply_along_axis(self.normalize, 1, self.data)
 
-    def predict(self, examples):
+    def predict(self, examples):  # TODO support for multiple examples ?
         return self._predict(examples[1:])
         # predicted_labels = [self._predict(example) for example in examples]
         # return np.array(predicted_labels)
@@ -39,6 +42,9 @@ class KNN:
         return (example - self.normalize_min_vals) / self.normalize_max_min_diff
 
 
+""" decision tree """
+
+
 class ID3:
     def __init__(self, label_index=0, epsilon=None):
         self.label_index = label_index
@@ -46,10 +52,9 @@ class ID3:
         self.root = None
         self.epsilon = epsilon
 
-    def train(self, df, min_examples=1):
+    def train(self, df, min_examples=2):
         self.features = df.columns  # save the features names
         self.root = self._train_(df.values, min_examples)
-        pass
 
     def _train_(self, data, min_examples):  # pruning with min_examples later
         if self.check_purity(data) or len(data) < min_examples:
@@ -84,9 +89,9 @@ class ID3:
             if column_index == self.label_index:
                 continue
             values = np.unique(data[:, column_index])  # get all the values for a specific column then remove duplicates
-            # potential_splits[column_index] = [(values[i] + values[i + 1]) / 2 for i in range(len(values) - 1)]
-            min_max_avg = (values.max() + values.min()) / 2
-            potential_splits[column_index] = [min_max_avg]
+            potential_splits[column_index] = [(values[i] + values[i + 1]) / 2 for i in range(len(values) - 1)]
+            # min_max_avg = (values.max() + values.min()) / 2
+            # potential_splits[column_index] = [min_max_avg]
         return potential_splits  # dict(sorted(potential_splits.items()))
 
     def split_data(self, data, split_column, split_value):
@@ -144,4 +149,66 @@ class ID3:
                     information_gain = current_info_gain
                     best_split_feature = feature
                     best_split_value = value
-        return best_split_feature, best_split_value #TODO info gain = 0 for everything corner case
+        return best_split_feature, best_split_value  # TODO info gain = 0 for everything corner case
+
+
+""" epsilon decision tree with knn from neighbours """
+
+
+class KnnEpsilon(ID3):
+    def __init__(self, label_index=0, epsilon=None, k_value=9):
+        super(KnnEpsilon, self).__init__(label_index, epsilon)
+        self.normalize_min_vals = None
+        self.normalize_max_min_diff = None
+        self.k = k_value
+
+    def train(self, df, min_examples=2):
+        data = df.values
+        self.normalize_min_vals = np.array([feature.min() for feature in data.T])
+        self.normalize_max_min_diff = np.array([feature.max() - feature.min() for feature in data.T])
+        self.normalize_min_vals[0] = 0  # manually add 0 for label min
+        self.normalize_max_min_diff[0] = 1  # manually add 1 for label max
+        data = np.apply_along_axis(self.normalize, 1, data)
+        self.root = self._train_(data, min_examples)
+
+    def classify_data(self, data):
+        node = Node(0, 0, leaf=True, data=data)
+        return node
+
+    def predict(self, example):
+        normalized_example = self.normalize(example.values)
+        if self.root is None:
+            print('Decision does not exist please train first.')
+        else:
+            node = self._predict(normalized_example, self.root)
+            neighbors_to_class_from = node.get_data()
+            distances = [euclidean_dist(normalized_example[1:], known_example[1:]) for known_example in neighbors_to_class_from]
+            k_indices = np.argsort(distances)[:self.k]
+            k_nearest_labels = np.array([neighbors_to_class_from[index, :1] for index in k_indices])
+            labels, counts = np.unique(k_nearest_labels, return_counts=True)
+            best_prediction = labels[np.argmax(counts)]
+            return best_prediction
+
+    def _predict(self, object_to_classify, node):
+        if node.is_leaf():
+            return node
+        feature = node.get_feature()
+        objects_value_for_feature = object_to_classify[feature]
+        node_split_value = node.get_value()
+        epsilon = self.epsilon[feature]
+        if abs(objects_value_for_feature - node_split_value) <= epsilon:
+            node_a = self._predict(object_to_classify, node.sons[0])
+            node_b = self._predict(object_to_classify, node.sons[1])
+            data_a = node_a.get_data()
+            data_b = node_b.get_data()
+            combined_data = np.concatenate((data_a, data_b), axis=0)
+            node = Node(0, 0, leaf=True, data=combined_data)
+            return node
+        elif objects_value_for_feature <= node_split_value:
+            node_to_return = self._predict(object_to_classify, node.sons[0])
+        else:
+            node_to_return = self._predict(object_to_classify, node.sons[1])
+        return node_to_return
+
+    def normalize(self, example):
+        return (example - self.normalize_min_vals) / self.normalize_max_min_diff

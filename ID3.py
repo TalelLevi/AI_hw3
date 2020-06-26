@@ -46,9 +46,9 @@ class ID3:
             if column_index == self.label_index:
                 continue
             values = np.unique(data[:, column_index])  # get all the values for a specific column then remove duplicates
-            # potential_splits[column_index] = [(values[i] + values[i + 1]) / 2 for i in range(len(values) - 1)]
-            min_max_avg = (values.max() + values.min()) / 2
-            potential_splits[column_index] = [min_max_avg]
+            potential_splits[column_index] = [(values[i] + values[i + 1]) / 2 for i in range(len(values) - 1)]
+            # min_max_avg = (values.max() + values.min()) / 2
+            # potential_splits[column_index] = [min_max_avg]
         return potential_splits
 
     def split_data(self, data, split_column, split_value):
@@ -97,4 +97,4 @@ class ID3:
                     information_gain = current_info_gain
                     best_split_feature = feature
                     best_split_value = value
-        return best_split_feature, best_split_value
+        return best_split_feature, best_split_value  #TODO make sure this wont happen ( no value return )

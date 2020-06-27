@@ -16,9 +16,8 @@ def calc_accuracy(df, classifer, test=True):
 
 
 df = pd.read_csv('train.csv')
-stds = [np.std(feature) * 0.1 for feature in df.values.T]
-classier = algo(epsilon=stds)
-classier.train(df, 9)
+classier = algo(epsilon=True)
+classier.train(df, min_examples=9)
 df2 = pd.read_csv('test.csv')
 calc_accuracy(df, classier, test=False)
 calc_accuracy(df2, classier)

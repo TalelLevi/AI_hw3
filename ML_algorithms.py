@@ -6,6 +6,14 @@ def euclidean_dist(vec1, vec2):
     return np.square(np.sum((vec1 - vec2) ** 2))
 
 
+def get_normalization_factors(data):
+    normalize_min_vals = np.array([feature.min() for feature in data.T])
+    normalize_max_min_diff = np.array([feature.max() - feature.min() for feature in data.T])
+    normalize_min_vals[0] = 0  # manually add 0 for label min
+    normalize_max_min_diff[0] = 1  # manually add 1 for label max
+    return normalize_min_vals, normalize_max_min_diff
+
+
 """ K-nearest-neighbours """
 
 
@@ -17,7 +25,7 @@ class KNN:
         self.normalize_min_vals = None
         self.normalize_max_min_diff = None
 
-    def fit(self, df):
+    def train(self, df):
         self.labels = df.values[:, :1]
         self.data = df.values[:, 1:]
         self.normalize_min_vals = np.array([feature.min() for feature in self.data.T])
@@ -26,8 +34,6 @@ class KNN:
 
     def predict(self, examples):  # TODO support for multiple examples ?
         return self._predict(examples[1:])
-        # predicted_labels = [self._predict(example) for example in examples]
-        # return np.array(predicted_labels)
 
     def _predict(self, example):
         normalized_example = self.normalize(example.values)
@@ -36,6 +42,8 @@ class KNN:
         k_nearest_labels = np.array([self.labels[index] for index in k_indices])
         labels, counts = np.unique(k_nearest_labels, return_counts=True)
         best_prediction = labels[np.argmax(counts)]
+        if len(labels) > 1 and counts[0] == counts[1]:
+            return True
         return best_prediction
 
     def normalize(self, example):
@@ -46,14 +54,14 @@ class KNN:
 
 
 class ID3:
-    def __init__(self, label_index=0, epsilon=None):
+    def __init__(self, label_index=0, epsilon=False):
         self.label_index = label_index
-        self.features = None
         self.root = None
         self.epsilon = epsilon
 
     def train(self, df, min_examples=2):
-        self.features = df.columns  # save the features names
+        if self.epsilon:
+            self.epsilon = [np.std(feature) * 0.1 for feature in df.values.T]
         self.root = self._train_(df.values, min_examples)
 
     def _train_(self, data, min_examples):  # pruning with min_examples later
@@ -105,6 +113,8 @@ class ID3:
             print('Decision does not exist please train first.')
         else:
             classifications = self._predict(object_to_classify, self.root)
+            if len(classifications) > 1 and classifications[0.0] == classifications[1.0]:
+                return True
             return max(classifications, key=classifications.get)
 
     def _predict(self, object_to_classify, node):
@@ -113,8 +123,9 @@ class ID3:
         feature = node.get_feature()
         objects_value_for_feature = object_to_classify[feature]
         node_split_value = node.get_value()
-        epsilon = self.epsilon[feature]
-        if abs(objects_value_for_feature - node_split_value) <= epsilon:
+        if self.epsilon:
+            epsilon = self.epsilon[feature]
+        if self.epsilon and abs(objects_value_for_feature - node_split_value) <= epsilon:
             a = self._predict(object_to_classify, node.sons[0])
             b = self._predict(object_to_classify, node.sons[1])
             classifications = {classification: a.get(classification, 0) + b.get(classification, 0) for
@@ -144,7 +155,6 @@ class ID3:
             for value in potential_splits[feature]:
                 data_below, data_above = self.split_data(data, split_column=feature, split_value=value)
                 current_info_gain = self.information_gain([data_below, data_above], data)
-
                 if current_info_gain > information_gain:
                     information_gain = current_info_gain
                     best_split_feature = feature
@@ -156,7 +166,7 @@ class ID3:
 
 
 class KnnEpsilon(ID3):
-    def __init__(self, label_index=0, epsilon=None, k_value=9):
+    def __init__(self, label_index=0, epsilon=False, k_value=9):
         super(KnnEpsilon, self).__init__(label_index, epsilon)
         self.normalize_min_vals = None
         self.normalize_max_min_diff = None
@@ -164,11 +174,9 @@ class KnnEpsilon(ID3):
 
     def train(self, df, min_examples=2):
         data = df.values
-        self.normalize_min_vals = np.array([feature.min() for feature in data.T])
-        self.normalize_max_min_diff = np.array([feature.max() - feature.min() for feature in data.T])
-        self.normalize_min_vals[0] = 0  # manually add 0 for label min
-        self.normalize_max_min_diff[0] = 1  # manually add 1 for label max
+        self.normalize_min_vals, self.normalize_max_min_diff = get_normalization_factors(data)
         data = np.apply_along_axis(self.normalize, 1, data)
+        self.epsilon = [np.std(feature) * 0.1 for feature in data.T]
         self.root = self._train_(data, min_examples)
 
     def classify_data(self, data):
@@ -176,17 +184,19 @@ class KnnEpsilon(ID3):
         return node
 
     def predict(self, example):
-        normalized_example = self.normalize(example.values)
+        normalized_example = self.normalize(example.values)[1:]
         if self.root is None:
-            print('Decision does not exist please train first.')
+            print('Decision tree does not exist please train first.')
         else:
             node = self._predict(normalized_example, self.root)
-            neighbors_to_class_from = node.get_data()
-            distances = [euclidean_dist(normalized_example[1:], known_example[1:]) for known_example in neighbors_to_class_from]
+            neighbors_to_predict_from = node.get_data()
+            labels = neighbors_to_predict_from[:, :1]
+            data = neighbors_to_predict_from[:, 1:]
+            distances = [euclidean_dist(normalized_example, known_example) for known_example in data]
             k_indices = np.argsort(distances)[:self.k]
-            k_nearest_labels = np.array([neighbors_to_class_from[index, :1] for index in k_indices])
-            labels, counts = np.unique(k_nearest_labels, return_counts=True)
-            best_prediction = labels[np.argmax(counts)]
+            k_nearest_labels = np.array([labels[index] for index in k_indices])
+            unique_labels, counts = np.unique(k_nearest_labels, return_counts=True)
+            best_prediction = unique_labels[np.argmax(counts)]
             return best_prediction
 
     def _predict(self, object_to_classify, node):

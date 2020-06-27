@@ -3,13 +3,11 @@ import numpy as np
 
 
 class ID3:
-    def __init__(self, label_index=0):
+    def __init__(self, label_index=0, epsilon=False):
         self.label_index = label_index
-        self.features = None
         self.root = None
 
     def train(self, df, min_examples=2):
-        self.features = df.columns  # save the features names
         self.root = self._train_(df.values, min_examples)
 
     def _train_(self, data, min_examples):  # pruning with min_examples later

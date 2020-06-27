@@ -16,8 +16,8 @@ def calc_accuracy(df, classifer, test=True):
 
 
 df = pd.read_csv('train.csv')
-classier = algo(0)
-classier.train(df, 27)
+classier = algo()
+classier.train(df, 3)
 df2 = pd.read_csv('test.csv')
 calc_accuracy(df, classier, test=False)
 calc_accuracy(df2, classier)

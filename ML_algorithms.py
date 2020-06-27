@@ -150,7 +150,7 @@ class ID3:
         return H - sum(prop_entropies)
 
     def find_best_split(self, data, potential_splits):
-        information_gain = 0
+        information_gain = -1
         for feature in potential_splits:
             for value in potential_splits[feature]:
                 data_below, data_above = self.split_data(data, split_column=feature, split_value=value)
@@ -159,10 +159,10 @@ class ID3:
                     information_gain = current_info_gain
                     best_split_feature = feature
                     best_split_value = value
-        return best_split_feature, best_split_value  # TODO info gain = 0 for everything corner case
+        return best_split_feature, best_split_value
 
 
-""" epsilon decision tree with knn from neighbours """
+""" epsilon decision tree with knn from epsilon tree decision """
 
 
 class KnnEpsilon(ID3):

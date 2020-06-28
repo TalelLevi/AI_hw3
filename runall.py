@@ -33,5 +33,5 @@ for algo, epsilon, params in algos_param:
             print(f'now running {algo} with {param} neighbors')
             classier = algo(param)
             classier.train(df)
-        calc_accuracy(df, classier, test=False)
+        # calc_accuracy(df, classier, test=False)
         calc_accuracy(df2, classier)

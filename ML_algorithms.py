@@ -65,7 +65,7 @@ class ID3:
         self.root = self._train_(df.values, min_examples)
 
     def _train_(self, data, min_examples):  # pruning with min_examples later
-        if self.check_purity(data) or len(data) < min_examples:
+        if self.check_purity(data) or len(data) <= min_examples:
             return self.classify_data(data)
 
         potential_splits = self.potential_splits(data)

@@ -59,7 +59,7 @@ class ID3:
         self.root = None
         self.epsilon = epsilon
 
-    def train(self, df, min_examples=2):
+    def train(self, df, min_examples=1):
         if self.epsilon:
             self.epsilon = [np.std(feature) * 0.1 for feature in df.values.T]
         self.root = self._train_(df.values, min_examples)
@@ -172,7 +172,7 @@ class KnnEpsilon(ID3):
         self.normalize_max_min_diff = None
         self.k = k_value
 
-    def train(self, df, min_examples=2):
+    def train(self, df, min_examples=1):
         data = df.values
         self.normalize_min_vals, self.normalize_max_min_diff = get_normalization_factors(data)
         data = np.apply_along_axis(self.normalize, 1, data)
